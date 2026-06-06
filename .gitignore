@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Environments
+.env
+.venv
+venv/
+
+# Type / lint / test caches
+.mypy_cache/
+.dmypy.json
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors
+.idea/
+.vscode/
+
+# --- cuenta: keep private details out of the public repo ---
+# Real config (names your active vendors + paths). Ship config.example.py instead.
+/config.py
+# Vendor parsers carry your resource->app maps; definitions/.gitignore keeps them out.
+# Dropped invoice PDFs and generated JSONL are private.
+/invoices/*.pdf
+/out/*.jsonl
