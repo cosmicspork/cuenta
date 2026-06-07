@@ -59,6 +59,14 @@ class InvoiceDefinition(BaseModel):
     detect: str | list[str] | Callable[[str], bool]
     # text -> dict matching ParsedInvoice
     parse: Callable[[str], dict[str, Any]]
+    # Extra fields a definition computes per emitted row. Applied in order (dict
+    # insertion order), each fn receiving the row built so far, so a later field can
+    # read an earlier one (e.g. a `ref` over a computed `project`). The framework
+    # stays neutral about what these mean; the contract lives with the definition.
+    computed: dict[str, Callable[[dict[str, Any]], Any]] = Field(default_factory=dict)
+    # Base keys to drop from the final row (e.g. an `app` bucket a `computed`
+    # `project` has already consumed).
+    drop: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _check_detect(self) -> InvoiceDefinition:
