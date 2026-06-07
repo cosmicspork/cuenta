@@ -17,7 +17,7 @@ from typing import Any, Literal, TextIO
 from pydantic import ValidationError as PydanticValidationError
 
 from cuenta import extract, router
-from cuenta.validator import ParsedInvoice, ValidatedDefinition
+from cuenta.validator import InvoiceDefinition, ParsedInvoice, ValidatedDefinition
 
 # Per-app line amounts must sum to the invoice total within this tolerance.
 RECONCILE_TOLERANCE = 0.02
@@ -80,7 +80,7 @@ def _run_one(pdf: Path, active: list[ValidatedDefinition], fh: TextIO) -> RunRes
                 message=f"reconciliation failed: lines sum {line_sum} != invoice total {parsed.total}",
             )
 
-        rows = _emit_rows(defn.vendor, defn.currency, parsed, pdf.name)
+        rows = _emit_rows(defn, parsed, pdf.name)
         for row in rows:
             fh.write(json.dumps(row) + "\n")
 
@@ -102,22 +102,24 @@ def _run_one(pdf: Path, active: list[ValidatedDefinition], fh: TextIO) -> RunRes
 
 
 def _emit_rows(
-    vendor: str, currency: str, parsed: ParsedInvoice, source: str
+    defn: InvoiceDefinition, parsed: ParsedInvoice, source: str
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for line in parsed.lines:
-        rows.append(
-            {
-                "date": parsed.date,
-                "vendor": vendor,
-                "type": "expense",
-                "app": line.app,
-                "amount": round(line.amount, 2),
-                "currency": currency,
-                "invoice_no": parsed.invoice_no,
-                "period": parsed.period,
-                "note": line.note,
-                "source": source,
-            }
-        )
+        row: dict[str, Any] = {
+            "date": parsed.date,
+            "vendor": defn.vendor,
+            "app": line.app,
+            "amount": round(line.amount, 2),
+            "currency": defn.currency,
+            "invoice_no": parsed.invoice_no,
+            "period": parsed.period,
+            "note": line.note,
+            "source": source,
+        }
+        for name, fn in defn.computed.items():
+            row[name] = fn(row)
+        for key in defn.drop:
+            row.pop(key, None)
+        rows.append(row)
     return rows

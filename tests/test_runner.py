@@ -31,10 +31,25 @@ def test_ok_emits_rows_and_stamps_fields(tmp_path: Path) -> None:
     assert {r["app"] for r in rows} == {"alpha", "shared"}
     row = next(r for r in rows if r["app"] == "alpha")
     assert row["vendor"] == "Acme"
-    assert row["type"] == "expense"
+    assert "type" not in row
     assert row["currency"] == "USD"
     assert row["invoice_no"] == "ACME-1"
     assert row["source"] == "x.pdf"
+
+
+def test_computed_fields_and_drop(tmp_path: Path) -> None:
+    raw = make_raw(
+        computed={
+            "project": lambda row: {"alpha": "personal"}.get(row["app"], row["app"]),
+            # reads the earlier computed field to prove ordering
+            "tag": lambda row: f"{row['project']}:{row['vendor']}",
+        },
+        drop=["app"],
+    )
+    _, rows = _run(raw, tmp_path)
+    row = next(r for r in rows if r["project"] == "personal")
+    assert "app" not in row
+    assert row["tag"] == "personal:Acme"
 
 
 def test_reconciliation_failure_writes_no_rows(tmp_path: Path) -> None:
